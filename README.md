@@ -1,0 +1,1 @@
+# aws-sdk-test-helper
