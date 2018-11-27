@@ -1,0 +1,9 @@
+deps
+dist
+test
+tests/eml
+nodelint.cfg
+.npmignore
+.gitmodules
+Makefile
+.idea

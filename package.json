@@ -18,5 +18,8 @@
   "homepage": "https://github.com/byskr/aws-sdk-test-helper#readme",
   "dependencies": {
     "sinon": "^7.1.1"
+  },
+  "devDependencies": {
+    "eslint": "^5.9.0"
   }
 }
