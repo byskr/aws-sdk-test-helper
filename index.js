@@ -28,21 +28,44 @@ function setStub(api, functionName) {
   let stub = sinon.stub();
   stubExpect.extendStub(stub);
   api.prototype[functionName] = stub;
-  stubReset(stub);
+  stubReset(functionName);
 
   return stub;
 }
 
 function setupTest() {
-  Object.keys(stubList).forEach(apiCall => {
-    stubReset(apiCall);
+  Object.keys(stubList).forEach(stub => {
+    stubReset(stub);
   });
 }
 
-function stubReset(stub) {
-  stub.reset();
-  stub.resetHistory();
-  stub.returns(defaultBehavior);
+function stubReset(functionName) {
+  stubList[functionName].reset();
+  stubList[functionName].resetHistory();
+  stubList[functionName].returns(defaultBehavior);
+}
+
+function tearDown() {
+  Object.keys(stubList).forEach(stub => {
+    checkOnTearDown(stub);
+    stubReset(stub);
+  });
+}
+
+function checkOnTearDown(functionName) {
+  let stub = stubList[functionName];
+
+  try {
+    stub.assertedCallCount(stub.assertedCallCount)
+  } catch (e) {
+    switch (e) {
+      case 'fail':
+        throw e;
+
+      default:
+        console.log(e);
+    }
+  }
 }
 
 let stubList = {};
@@ -94,20 +117,24 @@ let getStub = function (key) {
   return null;
 };
 
-let expectReject = function (stubKey, result) {
-  getStub(stubKey).expectReject(result);
+let expectReject = function (stubKey, result, expectedCallCount) {
+  getStub(stubKey).expectReject(result, expectedCallCount);
 };
 
-let expectResolve = function (stubKey, result) {
-  getStub(stubKey).expectResolve(result);
+let expectResolve = function (stubKey, result, expectedCallCount) {
+  getStub(stubKey).expectResolve(result, expectedCallCount);
 };
 
-let expectRejectWith = function (stubKey, params, result) {
-  getStub(stubKey).expectRejectWith(params, result);
+let expectRejectWith = function (stubKey, params, result, expectedCallCount) {
+  getStub(stubKey).expectRejectWith(params, result, expectedCallCount);
 };
 
-let expectResolveWith = function (stubKey, params, result) {
-  getStub(stubKey).expectResolveWith(params, result);
+let expectResolveWith = function (stubKey, params, result, expectedCallCount) {
+  getStub(stubKey).expectResolveWith(params, result, expectedCallCount);
+};
+
+let assertCallCount = function (stubKey, callCount, expectedCallCount) {
+  getStub(stubKey).assertCallCount(callCount, expectedCallCount);
 };
 
 init();
@@ -116,7 +143,10 @@ exports.expectResolve = expectResolve;
 exports.expectRejectWith = expectRejectWith;
 exports.expectResolveWith = expectResolveWith;
 
+exports.assertCallCount = assertCallCount;
+
 exports.init = init;
 exports.setup = setupTest;
+exports.tearDown = tearDown;
 exports.getStub = getStub;
 
