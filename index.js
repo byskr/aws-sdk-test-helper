@@ -1,113 +1,122 @@
 'use strict';
 
-'use strict';
-
 const sinon = require('sinon');
+const uuidv4 = require('uuid/v4')();
 const awsSdk = require('aws-sdk');
+const merge = require('deepmerge');
+const stubExpect = require('./lib/stub-expect');
 
-const awsServiceDefaults = {
-    S3: {
-        Functions: [
-            'putObject',
-            'getBucketLifecycleConfiguration',
-            'putBucketLifecycleConfiguration'
-        ]
-    },
-    DynamoDB: {
-        Functions: '*',
-        DocumentClient: {
-            Functions: '*'
-        }
-    },
-    Lambda: {
-        Functions: [
-            'invoke'
-        ]
-    }
-};
-
-
-let getPromiseObj = function (resolveValue) {
-    return {
-        promise: sinon.stub().resolves(resolveValue)
-    };
-};
-
-let getPromiseRejectObj = function (reason) {
-    return {
-        promise: sinon.stub().rejects(reason)
-    };
-};
-
-let returnsPromise = function (stub, params, resolves) {
-    stub
-        .withArgs(params)
-        .returns(
-            getPromiseObj(resolves)
-        );
-};
-
-let rejectsPromise = function (stub, params, reject) {
-    stub
-        .withArgs(params)
-        .returns(
-            getPromiseRejectObj(reject)
-        );
-};
-
-let mockAwsServices = function (awsServices, defaultBehavior) {
-
-
-    if (typeof awsServices === 'undefined' || Object.keys(awsServices).length === 0) {
-        awsServices = awsServiceDefaults;
+let mockAwsServices = function () {
+  Object.keys(stubList).forEach(apiCall => {
+    let tree = apiCall.split('.');
+    if (tree.length <= 1) {
+      throw new Error(apiCall + ' is not a valid path to a service')
     }
 
-    if (defaultBehavior === undefined) {
-        defaultBehavior = getPromiseRejectObj('default reject');
-    }
+    let functionName = tree.pop();
 
-    iterateServices(awsSdk, awsServices, defaultBehavior);
-};
-
-
-function iterateServices(aws, services, defaultBehavior) {
-    const serviceKeys = Object.keys(services);
-
-    for (let i = 0; i < serviceKeys.length; i++) {
-        let key = serviceKeys[i];
-
-        if (services[key].hasOwnProperty('Functions')) {
-            setStubs(aws[key].prototype, services[key].Functions, defaultBehavior);
-            delete services[key].Functions;
-        }
-
-        iterateServices(aws[key], services[key], defaultBehavior);
-    }
-}
-
-function setStubs(aws, functionList, defaultBehavior) {
-    if (functionList === '*') {
-        functionList = [];
-        Object.getOwnPropertyNames(aws).forEach(function (p) {
-            if (typeof aws[p] === 'function' && p !== 'constructor' && p !== 'configure' && p !== 'bindServiceObject' && p !== 'validateService') {
-                functionList.push(p);
-            }
-        });
-    }
-
-    if (functionList === null) {
-        return;
-    }
-
-    functionList.forEach((functionName) => {
-        aws[functionName] = sinon.stub();
-        aws[functionName].returns(defaultBehavior);
+    let api = awsSdk;
+    tree.forEach(elem => {
+      api = api[elem];
     });
+
+    stubList[apiCall] = setStub(api, functionName)
+  });
+};
+
+function setStub(api, functionName) {
+  let stub = sinon.stub();
+  stubExpect.extendStub(stub);
+  api.prototype[functionName] = stub;
+  stubReset(stub);
+
+  return stub;
 }
 
+function setupTest() {
+  Object.keys(stubList).forEach(apiCall => {
+    stubReset(apiCall);
+  });
+}
 
-exports.mockAwsServices = mockAwsServices;
-exports.getPromiseObj = getPromiseObj;
-exports.getPromiseRejectObj = getPromiseRejectObj;
-exports.returnsPromise = returnsPromise;
-exports.rejectsPromise = rejectsPromise;
+function stubReset(stub) {
+  stub.reset();
+  stub.resetHistory();
+  stub.returns(defaultBehavior);
+}
+
+let stubList = {};
+
+let defaultBehavior = stubExpect.getPromiseRejectObj('default reject ' + uuidv4);
+let stubTearDownError = 'fail';
+
+let init = function (options) {
+  let awsServices = require('./lib/function-reference/index').services;
+
+  if (typeof options !== "undefined") {
+    if (options.hasOwnProperty('defaultBehavior')) {
+      setDefaultBehavior(options);
+    }
+    if (options.hasOwnProperty('tearDown')) {
+      stubTearDownError = options.tearDown;
+    }
+    if (options.hasOwnProperty('awsServices')) {
+      merge(awsServices, options.awsServices)
+    }
+  }
+
+  awsServices.forEach(service => {
+    stubList[service] = null;
+  });
+
+  mockAwsServices()
+};
+
+let setDefaultBehavior = function (options) {
+  if (typeof options.defaultBehavior === 'function') {
+    defaultBehavior = options.defaultBehavior;
+
+    return
+  }
+
+  if (options.defaultBehavior === 'resolve') {
+    defaultBehavior = stubExpect.getPromiseObj('default resolve ' + uuidv4());
+  }
+
+  throw new Error('defaultBehavior invalid');
+};
+
+let getStub = function (key) {
+  if (stubList.hasOwnProperty(key)) {
+    return stubList[key];
+  }
+
+  return null;
+};
+
+let expectReject = function (stubKey, result) {
+  getStub(stubKey).expectReject(result);
+};
+
+let expectResolve = function (stubKey, result) {
+  getStub(stubKey).expectResolve(result);
+};
+
+let expectRejectWith = function (stubKey, params, result) {
+  getStub(stubKey).expectRejectWith(params, result);
+};
+
+let expectResolveWith = function (stubKey, params, result) {
+  getStub(stubKey).expectResolveWith(params, result);
+};
+
+init();
+exports.expectReject = expectReject;
+exports.expectResolve = expectResolve;
+exports.expectRejectWith = expectRejectWith;
+exports.expectResolveWith = expectResolveWith;
+
+exports.init = init;
+exports.setup = setupTest;
+exports.getStub = getStub;
+
