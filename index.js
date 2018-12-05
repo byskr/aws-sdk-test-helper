@@ -28,7 +28,6 @@ function setStub(api, functionName) {
   let stub = sinon.stub();
   stubExpect.extendStub(stub);
   api.prototype[functionName] = stub;
-  stubReset(functionName);
 
   return stub;
 }
