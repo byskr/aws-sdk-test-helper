@@ -98,11 +98,13 @@ let setDefaultBehavior = function (options) {
   if (typeof options.defaultBehavior === 'function') {
     defaultBehavior = options.defaultBehavior;
 
-    return
+    return;
   }
 
   if (options.defaultBehavior === 'resolve') {
-    defaultBehavior = stubExpect.getPromiseObj('default resolve ' + uuidv4());
+    defaultBehavior = stubExpect.getPromiseObj('default resolve ' + uuidv4);
+
+    return;
   }
 
   throw new Error('defaultBehavior invalid');
