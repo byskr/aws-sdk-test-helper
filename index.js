@@ -42,6 +42,7 @@ function stubReset(functionName) {
   stubList[functionName].reset();
   stubList[functionName].resetHistory();
   stubList[functionName].returns(defaultBehavior);
+  stubList[functionName].assertedCallCount = 0;
 }
 
 function tearDown() {
@@ -83,7 +84,7 @@ let init = function (options) {
       stubTearDownError = options.tearDown;
     }
     if (options.hasOwnProperty('awsServices')) {
-      merge(awsServices, options.awsServices)
+      awsServices = merge(awsServices, options.awsServices)
     }
   }
 
