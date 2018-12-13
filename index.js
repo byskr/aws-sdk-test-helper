@@ -56,7 +56,7 @@ function checkOnTearDown(functionName) {
   let stub = stubList[functionName];
 
   try {
-    stub.assertedCallCount(stub.assertedCallCount)
+    stub.assertCallCount(stub.assertedCallCount)
   } catch (e) {
     switch (e) {
       case 'fail':
