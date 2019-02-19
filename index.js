@@ -6,11 +6,16 @@ const awsSdk = require('aws-sdk');
 const merge = require('deepmerge');
 const stubExpect = require('./lib/stub-expect');
 
+let stubList = {};
+
+let defaultBehavior = stubExpect.getPromiseRejectObj('default reject ' + uuidv4);
+let stubTearDownError = '';
+
 let mockAwsServices = function () {
   Object.keys(stubList).forEach(apiCall => {
     let tree = apiCall.split('.');
     if (tree.length <= 1) {
-      throw new Error(apiCall + ' is not a valid path to a service')
+      throw new Error(apiCall + ' is not a valid path to a service');
     }
 
     let functionName = tree.pop();
@@ -20,13 +25,13 @@ let mockAwsServices = function () {
       api = api[elem];
     });
 
-    stubList[apiCall] = setStub(api, functionName)
+    stubList[apiCall] = setStub(api, functionName);
   });
 };
 
 function setStub(api, functionName) {
   let stub = sinon.stub();
-  stubExpect.extendStub(stub);
+  stubExpect.extendStub(stub, functionName);
   api.prototype[functionName] = stub;
 
   return stub;
@@ -56,27 +61,22 @@ function checkOnTearDown(functionName) {
   let stub = stubList[functionName];
 
   try {
-    stub.assertCallCount(stub.assertedCallCount)
+    stub.assertCallCount(stub.assertedCallCount);
   } catch (e) {
-    switch (e) {
+    switch (stubTearDownError) {
       case 'fail':
         throw e;
 
       default:
-        console.log(e);
+        console.warn(e);
     }
   }
 }
 
-let stubList = {};
-
-let defaultBehavior = stubExpect.getPromiseRejectObj('default reject ' + uuidv4);
-let stubTearDownError = 'fail';
-
 let init = function (options) {
   let awsServices = require('./lib/function-reference/index').services;
 
-  if (typeof options !== "undefined") {
+  if (typeof options !== 'undefined') {
     if (options.hasOwnProperty('defaultBehavior')) {
       setDefaultBehavior(options);
     }
@@ -84,7 +84,7 @@ let init = function (options) {
       stubTearDownError = options.tearDown;
     }
     if (options.hasOwnProperty('awsServices')) {
-      awsServices = merge(awsServices, options.awsServices)
+      awsServices = merge(awsServices, options.awsServices);
     }
   }
 
@@ -92,7 +92,7 @@ let init = function (options) {
     stubList[service] = null;
   });
 
-  mockAwsServices()
+  mockAwsServices();
 };
 
 let setDefaultBehavior = function (options) {
