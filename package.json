@@ -18,13 +18,13 @@
   "homepage": "https://github.com/byskr/aws-sdk-test-helper#readme",
   "dependencies": {
     "deepmerge": "^2.2.1",
-    "sinon": "^7.1.1",
+    "sinon": "^7.2.4",
     "uuid": "^3.3.2"
   },
   "devDependencies": {
-    "aws-sdk": "^2.363.0",
-    "eslint": "^5.9.0",
+    "aws-sdk": "^2.405.0",
     "chai": "^4.1.2",
+    "eslint": "^5.14.1",
     "mocha": "^5.2.0"
   }
 }
